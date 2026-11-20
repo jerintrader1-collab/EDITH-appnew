@@ -1,13 +1,10 @@
 
-name: Build EDITH Android APK
+name: Build EDITH APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   build:
@@ -17,28 +14,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Accept Android SDK licenses
-        run: |
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Build EDITH APK
-        run: gradle assembleDebug
+        working-directory: ./EDITH-appnew
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: EDITH-Android-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: EDITH-APK
+          path: EDITH-appnew/app/build/outputs/apk/debug/*.apk
