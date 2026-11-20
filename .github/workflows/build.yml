@@ -2,18 +2,13 @@
 name: Build EDITH APK
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: EDITH-appnew
 
     steps:
       - name: Checkout repository
@@ -25,31 +20,39 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Android SDK path
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Accept Android licenses
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -f "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses || true
+          else
+            echo "Using preinstalled Android SDK"
+          fi
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Install Android SDK
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        with:
+          gradle-version: '8.9'
 
       - name: Check project
         run: |
-          ls -la
-          ls -la app
-          test -f settings.gradle
-          test -f build.gradle
-          test -f app/build.gradle
+          echo "Checking EDITH Android project"
+          ls -la EDITH-appnew
+          ls -la EDITH-appnew/app
 
       - name: Build EDITH APK
-        uses: gradle/gradle-build-action@v3
-        with:
-          gradle-version: '8.9'
-          arguments: assembleDebug
-          build-root-directory: EDITH-appnew
+        working-directory: EDITH-appnew
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: EDITH-APK
           path: EDITH-appnew/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
