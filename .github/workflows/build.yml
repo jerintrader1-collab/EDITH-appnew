@@ -2,59 +2,54 @@
 name: Build EDITH APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   build:
-    name: Build EDITH Android App
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: EDITH-appnew
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools'
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: false
-
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Check project files
+      - name: Install Android SDK
         run: |
-          echo "Checking EDITH project..."
-          find . -maxdepth 5 -type f | sort
-          test -f EDITH-appnew/settings.gradle
-          test -f EDITH-appnew/build.gradle
-          test -f EDITH-appnew/app/build.gradle
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Check Gradle modules
-        working-directory: ./EDITH-appnew
-        run: gradle projects
+      - name: Check project
+        run: |
+          ls -la
+          ls -la app
+          test -f settings.gradle
+          test -f build.gradle
+          test -f app/build.gradle
 
       - name: Build EDITH APK
-        working-directory: ./EDITH-appnew
-        run: gradle :app:assembleDebug
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.9'
+          arguments: assembleDebug
+          build-root-directory: EDITH-appnew
 
-      - name: Upload EDITH APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: EDITH-APK
           path: EDITH-appnew/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 7
