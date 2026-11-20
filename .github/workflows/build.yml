@@ -1,9 +1,69 @@
 
-      - name: Check EDITH project structure
-        working-directory: .
+name: Build EDITH APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build EDITH Android App
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Install Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 3. Install Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+
+      # 4. Install Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 5. Check project folders
+      - name: Check EDITH project
         run: |
-          echo "=== ALL PROJECT FILES ==="
-          find . -maxdepth 6 -type f | sort
-          echo "=== GRADLE PROJECTS ==="
-          cd EDITH-appnew
-          gradle projects
+          echo "Repository files:"
+          find . -maxdepth 5 -type f | sort
+
+          echo "Checking Android project..."
+          test -f EDITH-appnew/settings.gradle
+          test -f EDITH-appnew/build.gradle
+          test -f EDITH-appnew/app/build.gradle
+
+      # 6. Check Gradle modules
+      - name: Check Gradle modules
+        working-directory: ./EDITH-appnew
+        run: gradle projects
+
+      # 7. Build APK
+      - name: Build EDITH APK
+        working-directory: ./EDITH-appnew
+        run: gradle :app:assembleDebug
+
+      # 8. Upload APK
+      - name: Upload EDITH APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EDITH-APK
+          path: EDITH-appnew/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
